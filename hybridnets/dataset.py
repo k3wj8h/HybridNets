@@ -46,7 +46,7 @@ class BDD100K(Dataset):
 
 
 	def _get_db(self):
-		print(f'building {self.train_or_val} database...')
+		print(f'building {"train" if self.is_train else "val"} database...')
 		gt_db = []
 		height, width = self.shapes
 		for mask in tqdm(list(self.image_list)):

@@ -5,11 +5,18 @@ from torchvision import transforms
 
 import os
 import yaml
+import math
+import datetime
+import traceback
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
 
 from tqdm.autonotebook import tqdm
 
 from hybridnets.dataset import BDD100K, BatchGenerator
 from hybridnets.backbone import HNBackBone
+from hybridnets.loss import ModelWithLoss
 
 
 def get_args():
@@ -240,7 +247,7 @@ class ClipBoxes(nn.Module):
 		
 		
 @torch.no_grad()
-def val(model, optimizer, val_generator, results, epoch, step, num_sample_images, download=False):
+def val(model, optimizer, val_generator, results, epoch, step, num_sample_images, download=False, param_file='./hybridnets/hybridnets.yml'):
 	model.eval()
 	loss_regression_ls = []
 	loss_classification_ls = []
@@ -248,7 +255,9 @@ def val(model, optimizer, val_generator, results, epoch, step, num_sample_images
 
 	regressBoxes = BBoxTransform()
 	clipBoxes = ClipBoxes()
-
+	
+	params = yaml.safe_load(open(param_file).read())
+	
 	val_loader = tqdm(val_generator)
 	for iter, data in enumerate(val_loader):
 		imgs = data['img'].cuda()
