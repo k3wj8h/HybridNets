@@ -1,4 +1,4 @@
-
+import torch
 from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as transforms
 import albumentations as A
@@ -7,7 +7,9 @@ import numpy as np
 import json
 import cv2
 import yaml
+import random
 
+from prefetch_generator import BackgroundGenerator
 from tqdm.autonotebook import tqdm
 
 # dataset handler object
@@ -18,16 +20,16 @@ class BDD100K(Dataset):
 		self.Tensor = transforms.ToTensor()
 		self.transform = transform
 		
-		params = yaml.safe_load(open(param_file).read())
+		self.params = yaml.safe_load(open(param_file).read())
 
 		train_or_val = 'train' if is_train else 'val'
-		self.img_root = Path(f'{params["img_root"]}/{train_or_val}')
-		self.label_root = Path(f'{params["label_root"]}/{train_or_val}')
-		self.darea_root = Path(f'{params["darea_root"]}/{train_or_val}')
-		self.lane_root = Path(f'{params["lane_root"]}/{train_or_val}')
+		self.img_root = Path(f'{self.params["img_root"]}/{train_or_val}')
+		self.label_root = Path(f'{self.params["label_root"]}/{train_or_val}')
+		self.darea_root = Path(f'{self.params["darea_root"]}/{train_or_val}')
+		self.lane_root = Path(f'{self.params["lane_root"]}/{train_or_val}')
 		
 		self.image_list = self.img_root.iterdir()
-		self.categories = params['categories']
+		self.categories = self.params['categories']
 
 		self.flip = True
 		self.albumentations_transform = A.Compose([
@@ -41,12 +43,12 @@ class BDD100K(Dataset):
 				bbox_params=A.BboxParams(format='pascal_voc', label_fields=['class_labels']),
 				additional_targets={'mask0': 'mask'})
 
-		self.shapes = np.array(params['orig_image_size'])
+		self.shapes = np.array(self.params['orig_image_size'])
 		self.db = self._get_db()
 
 
 	def _get_db(self):
-		print(f'building {"train" if self.is_train else "val"} database...')
+		print(f'building {"Train" if self.is_train else "Validation"} database...')
 		gt_db = []
 		height, width = self.shapes
 		for mask in tqdm(list(self.image_list)):
@@ -100,7 +102,7 @@ class BDD100K(Dataset):
 		top, bottom = int(round(dh-0.1)), int(round(dh+0.1))
 		left, right = int(round(dw-0.1)), int(round(dw+0.1))
 
-		img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=params['padding_rgb'])
+		img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=self.params['padding_rgb'])
 		seg_label = cv2.copyMakeBorder(seg_label, top, bottom, left, right, cv2.BORDER_CONSTANT, value=0)
 		lane_label = cv2.copyMakeBorder(lane_label, top, bottom, left, right, cv2.BORDER_CONSTANT, value=0)
 

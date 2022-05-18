@@ -10,9 +10,8 @@ rgb_std: [0.229, 0.224, 0.225]
 categories: ['car', 'bus', 'truck', 'train']
 orig_image_size: [720, 1280]
 input_size: [640, 384]
-padding_rgb: (114, 114, 114)
-anchor_ratios: [(0.62, 1.58), (1.0, 1.0), (1.58, 0.62)]
-anchor_scales: [2**0, 2**0.70, 2**1.32]
+anchor_ratios: '[(0.62, 1.58), (1.0, 1.0), (1.58, 0.62)]'
+anchor_scales: '[2**0, 2**0.70, 2**1.32]'
 compound_coef: 3
 seg_list: ['road','lane']
 

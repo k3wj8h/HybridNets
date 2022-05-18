@@ -8,7 +8,7 @@ from hybridnets.segmentation_head import SegmentationHead
 from efficientnet_pytorch import EfficientNet
 from efficientnet_pytorch.utils import get_model_params, url_map
 import numpy as np
-
+import itertools
 
 
 class HNBackBone(nn.Module):

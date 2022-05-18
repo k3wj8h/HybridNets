@@ -2,6 +2,7 @@ import argparse
 import torch
 import torch.nn as nn
 from torchvision import transforms
+from torchvision.ops.boxes import batched_nms
 
 import os
 import yaml
@@ -45,7 +46,7 @@ def train(num_gpus=1, num_epochs=5, load_checkpoint=None, num_sample_images=0, d
 	############
 	# datasets #
 	############
-	transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize(mean=params['rgb_mean'], std=['rgb_mean'])])
+	transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize(mean=params['rgb_mean'], std=params['rgb_mean'])])
 
 	# train data
 	train_dataset = BDD100K(is_train=True, inputsize=params['input_size'], transform=transform, param_file=param_file)
@@ -90,7 +91,7 @@ def train(num_gpus=1, num_epochs=5, load_checkpoint=None, num_sample_images=0, d
 			results = pd.read_json(ckpt['results'], orient='columns')
 		except ValueError as e:
 			print('[Warning] Load results failed: there is no result saved.')  
-	display(results.tail(5))
+	#display(results.tail(5))
 
 
 	epoch = 0
@@ -100,7 +101,7 @@ def train(num_gpus=1, num_epochs=5, load_checkpoint=None, num_sample_images=0, d
 	step = max(0, last_step)
 	model.train()
 
-	num_iter_per_epoch = len(model.train_generator)
+	num_iter_per_epoch = len(train_generator)
 
 	print(f'step: {step}, last_step: {last_step}, num_iter_per_epoch: {num_iter_per_epoch}')
 
@@ -111,7 +112,7 @@ def train(num_gpus=1, num_epochs=5, load_checkpoint=None, num_sample_images=0, d
 				continue
 
 			epoch_loss = []
-			progress_bar = tqdm(model.train_generator)
+			progress_bar = tqdm(train_generator)
 			for iter, data in enumerate(progress_bar):
 				if iter < step - last_epoch * num_iter_per_epoch:
 					progress_bar.update()
@@ -158,7 +159,7 @@ def train(num_gpus=1, num_epochs=5, load_checkpoint=None, num_sample_images=0, d
 
 			scheduler.step(np.mean(epoch_loss))
 
-			results = val(model, optimizer, model.val_generator, results, epoch, step, num_sample_images, download=download)
+			results = val(model, optimizer, val_generator, results, epoch, step, num_sample_images, download=download)
 	except KeyboardInterrupt:
 		save_checkpoint(model, params['save_path'], f'hybridnet_e{epoch}_s{step}.ckpt', optimizer=optimizer, step=step, results=results, download=download)
 

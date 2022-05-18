@@ -190,7 +190,7 @@ class FocalLoss(nn.Module):
         return IoU
 		
 		
-class TverskyLoss(nn.modules._Loss):
+class TverskyLoss(nn.modules.loss._Loss):
 
     def __init__(self, alpha: float = 0.5, beta: float = 0.5, gamma: float = 1.0):
         super().__init__()
@@ -225,7 +225,7 @@ class TverskyLoss(nn.modules._Loss):
         return intersection / (intersection + self.alpha * fp + self.beta * fn).clamp_min(eps)
 		
 		
-class FocalLossSeg(nn.modules_Loss):
+class FocalLossSeg(nn.modules.loss._Loss):
     def __init__(self, alpha: float = 0.25, gamma: float = 2.0):
         super().__init__()
         self.alpha = alpha
