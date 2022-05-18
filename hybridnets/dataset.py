@@ -102,7 +102,7 @@ class BDD100K(Dataset):
 		top, bottom = int(round(dh-0.1)), int(round(dh+0.1))
 		left, right = int(round(dw-0.1)), int(round(dw+0.1))
 
-		img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=self.params['padding_rgb'])
+		img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(114,114,114))
 		seg_label = cv2.copyMakeBorder(seg_label, top, bottom, left, right, cv2.BORDER_CONSTANT, value=0)
 		lane_label = cv2.copyMakeBorder(lane_label, top, bottom, left, right, cv2.BORDER_CONSTANT, value=0)
 

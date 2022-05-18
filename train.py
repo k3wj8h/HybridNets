@@ -56,6 +56,10 @@ def train(num_gpus=1, num_epochs=5, load_checkpoint=None, num_sample_images=0, d
 	val_dataset = BDD100K(is_train=False, inputsize=params['input_size'], transform=transform, param_file=param_file)
 	val_generator = BatchGenerator(val_dataset, batch_size=params['batch_size'], shuffle=False, num_workers=2, pin_memory=False, collate_fn=BDD100K.collate_fn)
 	
+	for i in range(opt.num_sample_images):
+		save_image(image=plt.imread(val_dataset.__getitem__(i)[1]), image_path=params['img_path'], filename=f"val{i+1}_e0.png", download=False)
+
+	
 	#########
 	# model #
 	#########
@@ -301,7 +305,7 @@ def val(model, optimizer, val_generator, results, epoch, step, num_sample_images
 	try:
 		from google.colab import files
 		ckpt_name = os.path.join(params['save_path'], f'hybridnet_e{epoch}.ckpt')
-		apply_model(img_path=f'{params["img_root"]}/val/*.jpg', checkpoint_name=ckpt_name, num_of_images=num_sample_images)
+		apply_model(img_path=f'{params["img_root"]}/val/*.jpg', checkpoint_name=ckpt_name, num_of_images=num_sample_images, params=params)
 	except:
 		print('Failed to download files')
 	model.train()
@@ -380,7 +384,7 @@ def plot_one_box(img, coord, label=None, score=None, color=None, line_thickness=
 		cv2.putText(img, '{}: {:.0%}'.format(label, score), (c1[0], c1[1] - 2), 0, float(tl) / 3, [0, 0, 0], thickness=tf, lineType=cv2.FONT_HERSHEY_SIMPLEX)
 		
 		
-def apply_model(img_path, checkpoint_name, model=None, num_of_images=1, download=False):
+def apply_model(img_path, checkpoint_name, model=None, num_of_images=1, params=params, download=False):
 	if model is None:
 		model = HNBackBone(num_classes=len(params['categories']), compound_coef=params['compound_coef'], ratios=params['anchor_ratios'], scales=params['anchor_scales'], seg_classes=len(params['seg_list']))
 
@@ -464,7 +468,7 @@ def apply_model(img_path, checkpoint_name, model=None, num_of_images=1, download
 				plot_one_box(ori_imgs[i], [x1, y1, x2, y2], color=((255,255,0)), label=obj, score=score, line_thickness=2)
 
 			epoch = re.findall(r'\d+',checkpoint_name)[0]
-			save_image(image=ori_imgs[i], filename=f"val{i+1}_e{epoch}.png", download=download)
+			save_image(image=ori_imgs[i], image_path=params['img_path'], filename=f"val{i+1}_e{epoch}.png", download=download)
 			
 
 def boolean_string(s):
@@ -476,7 +480,4 @@ def boolean_string(s):
 if __name__ == '__main__':
 	opt = get_args()
 	
-	for i in range(opt.num_sample_images):
-		save_image(image=plt.imread(val_dataset.__getitem__(i)[1]), filename=f"val{i+1}_0.png", download=False)
-
 	train(num_gpus=opt.num_gpus, num_epochs=opt.num_epochs, load_checkpoint=opt.load_checkpoint, num_sample_images=opt.num_sample_images, download=opt.download)
