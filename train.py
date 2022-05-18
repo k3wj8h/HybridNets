@@ -384,7 +384,7 @@ def plot_one_box(img, coord, label=None, score=None, color=None, line_thickness=
 		cv2.putText(img, '{}: {:.0%}'.format(label, score), (c1[0], c1[1] - 2), 0, float(tl) / 3, [0, 0, 0], thickness=tf, lineType=cv2.FONT_HERSHEY_SIMPLEX)
 		
 		
-def apply_model(img_path, checkpoint_name, model=None, num_of_images=0, params=params, download=False):
+def apply_model(img_path, checkpoint_name, model=None, num_of_images=0, params=None, download=False):
 	if model is None:
 		model = HNBackBone(num_classes=len(params['categories']), compound_coef=params['compound_coef'], ratios=params['anchor_ratios'], scales=params['anchor_scales'], seg_classes=len(params['seg_list']))
 
