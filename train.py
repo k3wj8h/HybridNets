@@ -25,7 +25,7 @@ def get_args():
 def train(num_gpus=1, num_epochs=5, load_checkpoint=None, num_sample_images=0, download=False, param_file='./hybridnets/hybridnets.yml'):
 	
 	params = yaml.safe_load(open(param_file).read())
-	print(params)
+	print(f'params: {params}')
 	
 	if torch.cuda.is_available():
 		torch.cuda.manual_seed(42)
@@ -160,9 +160,9 @@ def init_weights(model):
 	for name, module in model.named_modules():
 		if isinstance(module, nn.Conv2d):
 			if "conv_list" or "header" in name:
-				fan_in, fan_out = _calculate_fan_in_and_fan_out(module.weight.data)
+				fan_in, fan_out = nn.init._calculate_fan_in_and_fan_out(module.weight.data)
 				std = math.sqrt(1/float(fan_in))
-				_no_grad_normal_(module.weight.data, 0., std)
+				nn.init._no_grad_normal_(module.weight.data, 0., std)
 			else:
 				nn.init.kaiming_uniform_(module.weight.data)
 
