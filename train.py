@@ -25,12 +25,10 @@ def get_args():
 	parser.add_argument('--num_epochs', type=int, default=5)
 	parser.add_argument('--num_gpus', type=int, default=1)
 	parser.add_argument('--load_checkpoint', type=str, default=None, help='Load previous checkpoint, set None to initialize')
-	parser.add_argument('--num_sample_images', type=int, default=0, help='Number of generated sample images')
-	parser.add_argument('--download', type=boolean_string, default=False, help='Download checkpoints and sample images')
 	args = parser.parse_args()
 	return args
 
-def train(num_gpus=1, num_epochs=5, load_checkpoint=None, num_sample_images=0, download=False, param_file='./hybridnets/hybridnets.yml'):
+def train(num_gpus=1, num_epochs=5, load_checkpoint=None, param_file='./hybridnets/hybridnets.yml'):
 	
 	params = yaml.safe_load(open(param_file).read())
 	print(f'params: {params}')
@@ -157,9 +155,9 @@ def train(num_gpus=1, num_epochs=5, load_checkpoint=None, num_sample_images=0, d
 
 			scheduler.step(np.mean(epoch_loss))
 
-			results = val(model, optimizer, val_generator, results, epoch, num_epochs, step, num_sample_images, download=download)
+			results = val(model, optimizer, val_generator, results, epoch, num_epochs, step)
 	except KeyboardInterrupt:
-		save_checkpoint(model, params['save_path'], f'hybridnet_e{epoch}_s{step}.ckpt', optimizer=optimizer, step=step, results=results, download=download)
+		save_checkpoint(model, params['save_path'], f'hybridnet_e{epoch}_s{step}.ckpt', optimizer=optimizer, step=step, results=results)
 
 
 def init_weights(model):
@@ -180,7 +178,7 @@ def init_weights(model):
 					module.bias.data.zero_()
 					
 					
-def save_checkpoint(model_with_loss, saved_path, name, optimizer=None, step=None, results=None, download=False):
+def save_checkpoint(model_with_loss, saved_path, name, optimizer=None, step=None, results=None):
 	ckpt_obj = {}
 	ckpt_obj['model'] = model_with_loss.model.state_dict()
 	ckpt_obj['optimizer'] = optimizer.state_dict() if optimizer else None
@@ -188,22 +186,6 @@ def save_checkpoint(model_with_loss, saved_path, name, optimizer=None, step=None
 	ckpt_obj['results'] = results.to_json(orient='columns') if isinstance(results, pd.DataFrame) else None
 	filename = os.path.join(saved_path, name)
 	torch.save(ckpt_obj, filename)
-
-	if download:
-		files.download(filename)
-	
-
-def save_image(image, filename, image_path, download=False, figsize=(15,9)):
-	os.makedirs(image_path, exist_ok=True)
-
-	fig, ax = plt.subplots(1,1,figsize=figsize)
-	ax.imshow(image, interpolation='nearest', aspect='auto')
-	filename = os.path.join(image_path, filename)
-	fig.savefig(filename)
-	plt.close()
-
-	if download:
-		files.download(filename)
 
 
 class BBoxTransform(nn.Module):
@@ -246,7 +228,7 @@ class ClipBoxes(nn.Module):
 		
 		
 @torch.no_grad()
-def val(model, optimizer, val_generator, results, epoch, num_epochs, step, num_sample_images, download=False, param_file='./hybridnets/hybridnets.yml'):
+def val(model, optimizer, val_generator, results, epoch, num_epochs, step, param_file='./hybridnets/hybridnets.yml'):
 	model.eval()
 	loss_regression_ls = []
 	loss_classification_ls = []
@@ -295,7 +277,7 @@ def val(model, optimizer, val_generator, results, epoch, num_epochs, step, num_s
 							  'Learning_rate':None,
 							  'Timestamp':datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}, ignore_index=True)
 	
-	save_checkpoint(model_with_loss=model, saved_path=params['save_path'], name=f'hybridnet_e{epoch}.ckpt', optimizer=optimizer, step=step, results=results, download=download)
+	save_checkpoint(model_with_loss=model, saved_path=params['save_path'], name=f'hybridnet_e{epoch}.ckpt', optimizer=optimizer, step=step, results=results)
 
 	return results
 	
@@ -309,4 +291,4 @@ def boolean_string(s):
 if __name__ == '__main__':
 	opt = get_args()
 	
-	train(num_gpus=opt.num_gpus, num_epochs=opt.num_epochs, load_checkpoint=opt.load_checkpoint, num_sample_images=opt.num_sample_images, download=opt.download)
+	train(num_gpus=opt.num_gpus, num_epochs=opt.num_epochs, load_checkpoint=opt.load_checkpoint)
