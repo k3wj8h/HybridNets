@@ -150,7 +150,7 @@ class BDD100K(Dataset):
 					labels[:, 1] = cols - x2
 					labels[:, 3] = cols - x_tmp
 
-			""""""
+			"""
 			# random up-down flip
 			if random.random() < 0.5:
 				img = np.flipud(img)
@@ -163,7 +163,7 @@ class BDD100K(Dataset):
 					y_tmp = y1.copy()
 					labels[:, 2] = rows - y2
 					labels[:, 4] = rows - y_tmp
-			""""""
+			"""
 
 		if len(labels):
 			  labels_app = np.zeros((len(labels),5))
