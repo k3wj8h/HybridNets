@@ -163,7 +163,7 @@ def train(num_gpus=1, num_epochs=5, load_checkpoint=None, num_sample_images=0, d
 
 			scheduler.step(np.mean(epoch_loss))
 
-			results = val(model, optimizer, val_generator, results, epoch, step, num_sample_images, download=download)
+			results = val(model, optimizer, val_generator, results, epoch, num_epochs, step, num_sample_images, download=download)
 	except KeyboardInterrupt:
 		save_checkpoint(model, params['save_path'], f'hybridnet_e{epoch}_s{step}.ckpt', optimizer=optimizer, step=step, results=results, download=download)
 
@@ -252,7 +252,7 @@ class ClipBoxes(nn.Module):
 		
 		
 @torch.no_grad()
-def val(model, optimizer, val_generator, results, epoch, step, num_sample_images, download=False, param_file='./hybridnets/hybridnets.yml'):
+def val(model, optimizer, val_generator, results, epoch, num_epochs, step, num_sample_images, download=False, param_file='./hybridnets/hybridnets.yml'):
 	model.eval()
 	loss_regression_ls = []
 	loss_classification_ls = []
