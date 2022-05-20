@@ -278,7 +278,8 @@ def val(model, optimizer, val_generator, results, epoch, num_epochs, step, param
 							  'Timestamp':datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}, ignore_index=True)
 	
 	save_checkpoint(model_with_loss=model, saved_path=params['save_path'], name=f'hybridnet_e{epoch}.ckpt', optimizer=optimizer, step=step, results=results)
-
+	
+	model.train()
 	return results
 	
 
