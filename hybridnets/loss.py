@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from typing import Optional
 
 class ModelWithLoss(nn.Module):
     def __init__(self, model, debug=False):
@@ -226,7 +227,7 @@ class TverskyLoss(nn.modules.loss._Loss):
 		
 		
 class FocalLossSeg(nn.modules.loss._Loss):
-    def __init__(self, alpha: float = 0.25, gamma: float = 2.0):
+    def __init__(self, alpha: Optional[float] = 0.25, gamma: Optional[float] = 2.0):
         super().__init__()
         self.alpha = alpha
         self.gamma = gamma

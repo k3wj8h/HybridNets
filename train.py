@@ -57,13 +57,14 @@ def train(num_gpus=1, num_epochs=5, load_checkpoint=None, param_file='./hybridne
 	#########
 	# model #
 	#########
-	model = HNBackBone(num_classes=len(params['categories']), compound_coef=params['compound_coef'], ratios=params['anchor_ratios'], scales=params['anchor_scales'], seg_classes=len(params['seg_list']))
+	model = HNBackBone(num_classes=len(params['categories']), ratios=params['anchor_ratios'], scales=params['anchor_scales'], seg_classes=len(params['seg_list']))
 
 	ckpt = {}
 	if load_checkpoint:
 		try:
 			ckpt = torch.load(load_checkpoint)
 			model.load_state_dict(ckpt['model'])
+			print('[Info] Checkpoint loaded!!!')
 		except RuntimeError as e:
 			print(f'[Warning] Ignoring {e}')
 			print('[Warning] Don\'t panic if you see this, this might be because you load a pretrained weights with different number of classes. The rest of the weights should be loaded already.')
@@ -71,13 +72,14 @@ def train(num_gpus=1, num_epochs=5, load_checkpoint=None, param_file='./hybridne
 		print('[Info] initializing weights...')
 		init_weights(model)
 
-	print('[Info] Successfully!!!')
+	
 
 	model = ModelWithLoss(model).cuda()
 	optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
 
 	if load_checkpoint is not None and ckpt.get('optimizer', None):
 		optimizer.load_state_dict(ckpt['optimizer'])
+		print('[Info] Optimizer loaded')
 
 	scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
 
@@ -85,14 +87,13 @@ def train(num_gpus=1, num_epochs=5, load_checkpoint=None, param_file='./hybridne
 	results = pd.DataFrame(columns=['Dataset','Step','Epoch','Loss','Regression_loss','Classification_loss','Segmentation_loss','Learning_rate','Timestamp'])
 	if load_checkpoint and ckpt.get('results', None) is not None:
 		try:
-			print('[Info] Load results...')
+			
 			results = pd.read_json(ckpt['results'], orient='columns')
+			print('[Info] Results are loaded')
 		except ValueError as e:
-			print('[Warning] Load results failed: there is no result saved.')
+			print('[Warning] Loading results failed: there is no result saved.')
 
 	epoch = 0
-	best_loss = 1e5
-	best_epoch = 0
 	last_step = ckpt['step'] if load_checkpoint is not None and ckpt.get('step', None) else 0
 	step = max(0, last_step)
 	model.train()
