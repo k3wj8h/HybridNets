@@ -104,7 +104,10 @@ def train(num_gpus=1, num_epochs=5, load_checkpoint=None, param_file='./hybridne
 	try:
 		for epoch in range(1, num_epochs+1):
 			last_epoch = step // num_iter_per_epoch
-			if epoch < last_epoch:
+			# find the last complete epoch
+			if step - last_epoch * num_iter_per_epoch > 0
+				last_epoch =- 1
+			if epoch <= last_epoch:
 				continue
 
 			epoch_loss = []
@@ -278,8 +281,8 @@ def val(model, optimizer, val_generator, results, epoch, num_epochs, step, param
 							  'Timestamp':datetime.datetime.now().strftime("%Y%m%d-%H%M%S")}, ignore_index=True)
 	
 	save_checkpoint(model_with_loss=model, saved_path=params['save_path'], name=f'hybridnet_e{epoch}.ckpt', optimizer=optimizer, step=step, results=results)
-	
 	model.train()
+	
 	return results
 	
 

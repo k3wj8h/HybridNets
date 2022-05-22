@@ -71,5 +71,7 @@ def plot_losses(data, image_path):
 if __name__ == '__main__':
 	opt = get_args()
 	results_df = load_results_by_checkpoints(opt.checkpoint)
+	if isinstance(results_df, int):
+		raise ValueError('Checkpoint file could not loaded')
 	
 	plot_losses(results_df, opt.image_path)

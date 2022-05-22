@@ -23,6 +23,7 @@ def get_args():
 	parser.add_argument('--image_path', type=str, default='./sample_images', help='Path to save images')
 	parser.add_argument('--num_of_images', type=int, default=1, help='Number of sample images')
 	parser.add_argument('--param_file', type=str, default='./hybridnets/hybridnets.yml', help='Parameter yaml file')
+	parser.add_argument('--dataset', type=str, default='val', help='Dataset train or val')
 	args = parser.parse_args()
 	return args
 
@@ -138,7 +139,7 @@ def plot_one_box(img, coord, label=None, score=None, color=None, line_thickness=
 		cv2.putText(img, '{}: {:.0%}'.format(label, score), (c1[0], c1[1] - 2), 0, float(tl) / 3, [0, 0, 0], thickness=tf, lineType=cv2.FONT_HERSHEY_SIMPLEX)
 
 
-def apply_model(checkpoint_name, num_of_images, param_file):
+def apply_model(checkpoint_name, num_of_images, param_file, dataset):
 	
 	params = yaml.safe_load(open(param_file).read())
 	model = HNBackBone(num_classes=len(params['categories']), compound_coef=params['compound_coef'], ratios=params['anchor_ratios'], scales=params['anchor_scales'], seg_classes=len(params['seg_list']))
@@ -155,7 +156,7 @@ def apply_model(checkpoint_name, num_of_images, param_file):
 	####################
 	# transform images #
 	####################
-	imgs = glob.glob(f'{params["img_root"]}/val/*.jpg')
+	imgs = glob.glob(f'{params["img_root"]}/{dataset}/*.jpg')
 	input_imgs = []
 	shapes = []
 	det_only_imgs = []
@@ -224,7 +225,7 @@ def apply_model(checkpoint_name, num_of_images, param_file):
 			epoch = re.findall(r'\d+',checkpoint_name)[0]
 			fig, ax = plt.subplots(1,1,figsize=(15,9))
 			ax.imshow(ori_imgs[i], interpolation='nearest', aspect='auto')
-			filename = os.path.join(params['img_path'], f"val{i+1}_e{epoch}.png")
+			filename = os.path.join(params['img_path'], f"{dataset}{i+1}_e{epoch}.png")
 			fig.savefig(filename)
 			plt.close()
 			print(f'{filename} saved')
@@ -233,4 +234,4 @@ def apply_model(checkpoint_name, num_of_images, param_file):
 if __name__ == '__main__':
 	opt = get_args()
 	
-	apply_model(checkpoint_name=opt.checkpoint, num_of_images=opt.num_of_images, param_file=opt.param_file)
+	apply_model(checkpoint_name=opt.checkpoint, num_of_images=opt.num_of_images, param_file=opt.param_file, dataset=opt.dataset)
