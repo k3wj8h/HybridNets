@@ -105,7 +105,7 @@ def train(num_gpus=1, num_epochs=5, load_checkpoint=None, param_file='./hybridne
 		for epoch in range(1, num_epochs+1):
 			last_epoch = step // num_iter_per_epoch
 			# find the last complete epoch
-			if step - last_epoch * num_iter_per_epoch > 0
+			if step - last_epoch * num_iter_per_epoch > 0:
 				last_epoch =- 1
 			if epoch <= last_epoch:
 				continue
