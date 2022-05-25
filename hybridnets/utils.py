@@ -117,10 +117,11 @@ def plot_one_box(img, coord, label=None, score=None, color=None, line_thickness=
         cv2.putText(img, '{}: {:.0%}'.format(label, score), (c1[0], c1[1] - 2), 0, float(tl) / 3, [0, 0, 0], thickness=tf, lineType=cv2.FONT_HERSHEY_SIMPLEX)
 
 
-def save_checkpoint(model_with_loss, saved_path, name, optimizer=None, step=None, results=None, download=False):
+def save_checkpoint(model_with_loss, saved_path, name, optimizer=None, scheduler=None, step=None, results=None):
     ckpt_obj = {}
     ckpt_obj['model'] = model_with_loss.model.state_dict()
     ckpt_obj['optimizer'] = optimizer.state_dict() if optimizer else None
+	ckpt_obj['scheduler'] = scheduler.state_dict() if scheduler else None
     ckpt_obj['step'] = step if step else 0
     ckpt_obj['results'] = results.to_json(orient='columns') if isinstance(results, pd.DataFrame) else None
     filename = os.path.join(saved_path, name)
