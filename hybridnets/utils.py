@@ -5,6 +5,8 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+from torchvision.ops.boxes import batched_nms
+
 
 class BBoxTransform(nn.Module):
 
