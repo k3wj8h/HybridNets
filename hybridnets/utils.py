@@ -131,7 +131,7 @@ def save_checkpoint(model_with_loss, saved_path, name, optimizer=None, scheduler
 	torch.save(ckpt_obj, filename)
 
 
-def save_image(image, filename, image_path='./sample_images/', download=False, figsize=(15,9)):
+def save_image(image, filename, image_path='./sample_images/', figsize=(15,9)):
 	os.makedirs(image_path, exist_ok=True)
 
 	fig, ax = plt.subplots(1,1,figsize=figsize)

@@ -1,9 +1,9 @@
 import torch
 from torch import nn
 
-from hybridnets.neck import BiFPN, BiFPNDecoder
+from hybridnets.neck import BiFPN
 from hybridnets.classification_head import Classifier, Regressor
-from hybridnets.segmentation_head import SegmentationHead
+from hybridnets.segmentation_head import BiFPNDecoder, SegmentationHead
 
 from efficientnet_pytorch import EfficientNet
 from efficientnet_pytorch.utils import get_model_params, url_map
