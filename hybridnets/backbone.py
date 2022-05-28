@@ -2,7 +2,7 @@ import torch
 from torch import nn
 
 from hybridnets.neck import BiFPN
-from hybridnets.detection_head import Classifier, Regressor
+from hybridnets.detection_head import Classifier, Regressor, Anchors
 from hybridnets.segmentation_head import BiFPNDecoder, SegmentationHead
 
 from efficientnet_pytorch import EfficientNet
