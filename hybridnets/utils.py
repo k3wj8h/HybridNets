@@ -236,3 +236,174 @@ def apply_model(checkpoint_name, model=None, num_of_images=1, param_file='./hybr
 			save_image(image=ori_imgs[i], filename=f"val{i+1}_e{epoch}.png")
 
 
+# EVAL functions
+def process_batch(detections, labels, iou_thresholds):
+	"""
+	Return correct predictions matrix. Both sets of boxes are in (x1, y1, x2, y2) format.
+	Arguments:
+		detections (Array[N, 6]), x1, y1, x2, y2, conf, class
+
+		labels (Array[M, 5]), class, x1, y1, x2, y2
+		iou_thresholds: list iou thresholds from 0.5 -> 0.95
+	Returns:
+		correct (Array[N, 10]), for 10 IoU levels
+	"""
+	labels = labels.to(detections.device)
+	# print("ASDA", detections[:, 5].shape)
+	# print("SADASD", labels[:, 4].shape)
+	correct = torch.zeros(detections.shape[0], iou_thresholds.shape[0], dtype=torch.bool, device=iou_thresholds.device)
+	iou = box_iou(labels[:, :4], detections[:, :4])
+	# print(labels[:, 4], detections[:, 5])
+	x = torch.where((iou >= iou_thresholds[0]) & (labels[:, 4:5] == detections[:, 5]))
+	# abc = detections[:,5].unsqueeze(1)
+	# print(labels[:, 4] == abc)
+	# exit()
+	if x[0].shape[0]:
+		# [label, detection, iou]
+		matches = torch.cat((torch.stack(x, 1), iou[x[0], x[1]][:, None]), 1).cpu().numpy()
+		if x[0].shape[0] > 1:
+			matches = matches[matches[:, 2].argsort()[::-1]]
+			matches = matches[np.unique(matches[:, 1], return_index=True)[1]]
+			matches = matches[np.unique(matches[:, 0], return_index=True)[1]]
+		matches = torch.Tensor(matches).to(iou_thresholds.device)
+		correct[matches[:, 1].long()] = matches[:, 2:3] >= iou_thresholds
+
+	return correct
+
+
+def box_iou(box1, box2):
+	# https://github.com/pytorch/vision/blob/master/torchvision/ops/boxes.py
+	"""
+	Return intersection-over-union (Jaccard index) of boxes.
+	Both sets of boxes are expected to be in (x1, y1, x2, y2) format.
+	Arguments:
+		box1 (Tensor[N, 4])
+		box2 (Tensor[M, 4])
+	Returns:
+		iou (Tensor[N, M]): the NxM matrix containing the pairwise
+			IoU values for every element in boxes1 and boxes2
+	"""
+
+	def box_area(box):
+		# box = 4xn
+		return (box[2] - box[0]) * (box[3] - box[1])
+
+	box1 = box1.cuda()
+	area1 = box_area(box1.T)
+	area2 = box_area(box2.T)
+
+	# inter(N,M) = (rb(N,M,2) - lt(N,M,2)).clamp(0).prod(2)
+	inter = (torch.min(box1[:, None, 2:], box2[:, 2:]) - torch.max(box1[:, None, :2], box2[:, :2])).clamp(0).prod(2)
+	return inter / (area1[:, None] + area2 - inter)  # iou = inter / (area1 + area2 - inter)
+
+
+def ap_per_class(tp, conf, pred_cls, target_cls, plot=False, save_dir='precision-recall_curve.png', names=[]):
+	""" Compute the average precision, given the recall and precision curves.
+	Source: https://github.com/rafaelpadilla/Object-Detection-Metrics.
+	# Arguments
+		tp:  True positives (nparray, nx1 or nx10).
+		conf:  Objectness value from 0-1 (nparray).
+		pred_cls:  Predicted object classes (nparray).
+		target_cls:  True object classes (nparray).
+		plot:  Plot precision-recall curve at mAP@0.5
+		save_dir:  Plot save directory
+	# Returns
+		The average precision as computed in py-faster-rcnn.
+	"""
+
+	# Sort by objectness
+	i = np.argsort(-conf)
+	tp, conf, pred_cls = tp[i], conf[i], pred_cls[i]
+
+	# Find unique classes
+	unique_classes = np.unique(target_cls)
+
+	# Create Precision-Recall curve and compute AP for each class
+	px, py = np.linspace(0, 1, 1000), []  # for plotting
+	pr_score = 0.1  # score to evaluate P and R https://github.com/ultralytics/yolov3/issues/898
+	s = [unique_classes.shape[0], tp.shape[1]]  # number class, number iou thresholds (i.e. 10 for mAP0.5...0.95)
+	ap, p, r = np.zeros(s), np.zeros((unique_classes.shape[0], 1000)), np.zeros((unique_classes.shape[0], 1000))
+	for ci, c in enumerate(unique_classes):
+		i = pred_cls == c
+		n_l = (target_cls == c).sum()  # number of labels
+		n_p = i.sum()  # number of predictions
+
+		if n_p == 0 or n_l == 0:
+			continue
+		else:
+			# Accumulate FPs and TPs
+			fpc = (1 - tp[i]).cumsum(0)
+			tpc = tp[i].cumsum(0)
+
+			# Recall
+			recall = tpc / (n_l + 1e-16)  # recall curve
+			r[ci] = np.interp(-px, -conf[i], recall[:, 0], left=0)  # negative x, xp because xp decreases
+
+			# Precision
+			precision = tpc / (tpc + fpc)  # precision curve
+			p[ci] = np.interp(-px, -conf[i], precision[:, 0], left=1)  # p at pr_score
+			# AP from recall-precision curve
+			for j in range(tp.shape[1]):
+				ap[ci, j], mpre, mrec = compute_ap(recall[:, j], precision[:, j])
+				if plot and (j == 0):
+					py.append(np.interp(px, mrec, mpre))  # precision at mAP@0.5
+
+	# Compute F1 score (harmonic mean of precision and recall)
+	f1 = 2 * p * r / (p + r + 1e-16)
+	i=r.mean(0).argmax()
+
+	if plot:
+		plot_pr_curve(px, py, ap, save_dir, names)
+
+	return p[:, i], r[:, i], f1[:, i], ap, unique_classes.astype('int32')
+
+
+def compute_ap(recall, precision):
+	""" Compute the average precision, given the recall and precision curves
+	# Arguments
+		recall:	The recall curve (list)
+		precision: The precision curve (list)
+	# Returns
+		Average precision, precision curve, recall curve
+	"""
+
+	# Append sentinel values to beginning and end
+	mrec = np.concatenate(([0.0], recall, [1.0]))
+	mpre = np.concatenate(([1.0], precision, [0.0]))
+
+	# Compute the precision envelope
+	mpre = np.flip(np.maximum.accumulate(np.flip(mpre)))
+
+	# Integrate area under curve
+	method = 'interp'  # methods: 'continuous', 'interp'
+	if method == 'interp':
+		x = np.linspace(0, 1, 101)  # 101-point interp (COCO)
+		ap = np.trapz(np.interp(x, mrec, mpre), x)  # integrate
+	else:  # 'continuous'
+		i = np.where(mrec[1:] != mrec[:-1])[0]  # points where x axis (recall) changes
+		ap = np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])  # area under curve
+
+	return ap, mpre, mrec
+
+
+def plot_pr_curve(px, py, ap, save_dir='pr_curve.png', names=()):
+	# Precision-recall curve
+	fig, ax = plt.subplots(1, 1, figsize=(9, 6), tight_layout=True)
+	py = np.stack(py, axis=1)
+
+	if 0 < len(names) < 21:  # display per-class legend if < 21 classes
+		for i, y in enumerate(py.T):
+			ax.plot(px, y, linewidth=1, label=f'{names[i]} {ap[i, 0]:.3f}')  # plot(recall, precision)
+	else:
+		ax.plot(px, py, linewidth=1, color='grey')  # plot(recall, precision)
+
+	ax.plot(px, py.mean(1), linewidth=3, color='blue', label='all classes %.3f mAP@0.5' % ap[:, 0].mean())
+	ax.set_xlabel('Recall')
+	ax.set_ylabel('Precision')
+	ax.set_xlim(0, 1)
+	ax.set_ylim(0, 1)
+	plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
+	fig.savefig(Path(save_dir), dpi=250)
+	plt.close()
+
+
