@@ -140,6 +140,7 @@ def val_from_cmd(model, val_generator, params, opt):
 		f1 = smp_metrics.balanced_accuracy(tp_seg, fp_seg, fn_seg, tn_seg, reduction='none')
 
 		for i in range(len(params['seg_list']) + 1):
+			print(f'{iter} - iou.T[i].detach().cpu().numpy(): {iou.T[i].detach().cpu().numpy()}')
 			iou_ls[i].append(iou.T[i].detach().cpu().numpy())
 			f1_ls[i].append(f1.T[i].detach().cpu().numpy())
 
@@ -181,17 +182,23 @@ def val_from_cmd(model, val_generator, params, opt):
 
 	iou_second_decoder = iou_ls[0] + iou_ls[2]
 	iou_second_decoder = np.mean(iou_second_decoder)
+	
+	print('ckpt1')
 
 	for i in range(len(params['seg_list']) + 1):
 		iou_ls[i] = np.mean(iou_ls[i])
 		f1_ls[i] = np.mean(f1_ls[i])
 
+	print('ckpt2')
+	
 	# Compute statistics
 	stats = [np.concatenate(x, 0) for x in zip(*stats)]
 
 	# Count detected boxes per class
 	# boxes_per_class = np.bincount(stats[2].astype(np.int64), minlength=1)
-
+	
+	print('ckpt3')
+	
 	ap50 = None
 	save_dir = 'plots'
 	os.makedirs(save_dir, exist_ok=True)
@@ -205,11 +212,17 @@ def val_from_cmd(model, val_generator, params, opt):
 	else:
 		nt = torch.zeros(1)
 
+	print('ckpt4')
+
 	# Print results
+	print(f'mAP50: {ap50}, IoU_first: {iou_first_decoder}, iou_second_decoder: {iou_second_decoder}')
+	
 	print(s)
 	pf = '%15s' + '%11i' * 2 + '%11.3g' * 12  # print format
 	print(pf % ('all', seen, nt.sum(), mp, mr, map50, map, iou_score, f1_score, iou_first_decoder, iou_second_decoder,
 				iou_ls[1], f1_ls[1], iou_ls[2], f1_ls[2]))
+				
+	
 
 	# Print results per class
 	training = False
@@ -228,12 +241,12 @@ if __name__ == "__main__":
 	args = ap.parse_args()
 
 	
-	params = yaml.safe_load(open(param_file).read())
+	params = yaml.safe_load(open(args.param_file).read())
 	
 	# Validation dataset
 	transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize(mean=params['rgb_mean'], std=params['rgb_std'])])
 
-	val_dataset = BDD100K(is_train=False, inputsize=params['input_size'], transform=transform, param_file=param_file)
+	val_dataset = BDD100K(is_train=False, inputsize=params['input_size'], transform=transform, param_file=args.param_file)
 	val_generator = BatchGenerator(val_dataset, batch_size=params['batch_size'], shuffle=False, num_workers=2, pin_memory=False, collate_fn=BDD100K.collate_fn)
 	
 	# Model
