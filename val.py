@@ -17,7 +17,7 @@ def val_from_cmd(model, val_generator, params, opt):
 	jdict, stats, ap, ap_class = [], [], [], []
 	iou_thresholds = torch.linspace(0.5, 0.95, 10).cuda()  # iou vector for mAP@0.5:0.95
 	num_thresholds = iou_thresholds.numel()
-	names = {i: v for i, v in enumerate(params.obj_list)}
+	names = {i: v for i, v in enumerate(params['categories'])}
 	nc = len(names)
 	seen = 0
 	s = ('%15s' + '%11s' * 14) % (
@@ -139,7 +139,7 @@ def val_from_cmd(model, val_generator, params, opt):
 		#		 print(iou)
 		f1 = smp_metrics.balanced_accuracy(tp_seg, fp_seg, fn_seg, tn_seg, reduction='none')
 
-		for i in range(len(params.seg_list) + 1):
+		for i in range(len(params['seg_list']) + 1):
 			iou_ls[i].append(iou.T[i].detach().cpu().numpy())
 			f1_ls[i].append(f1.T[i].detach().cpu().numpy())
 
@@ -182,7 +182,7 @@ def val_from_cmd(model, val_generator, params, opt):
 	iou_second_decoder = iou_ls[0] + iou_ls[2]
 	iou_second_decoder = np.mean(iou_second_decoder)
 
-	for i in range(len(params.seg_list) + 1):
+	for i in range(len(params['seg_list']) + 1):
 		iou_ls[i] = np.mean(iou_ls[i])
 		f1_ls[i] = np.mean(f1_ls[i])
 
@@ -223,7 +223,7 @@ if __name__ == "__main__":
 	ap = argparse.ArgumentParser()
 	ap.add_argument('--batch_size', type=int, default=10, help='The number of images per batch among all devices')
 	ap.add_argument('--num_gpus', type=int, default=1, help='Number of GPUs to be used (0 to use CPU)')
-	ap.add_argument('--load_checpoint', type=str, help='Path of checkpoint file')
+	ap.add_argument('--checkpoint', type=str, help='Path of checkpoint file')
 	ap.add_argument('--param_file', type=str, default='./hybridnets/hybridnets.yml', help='Path of parameter file')
 	args = ap.parse_args()
 
@@ -239,7 +239,7 @@ if __name__ == "__main__":
 	# Model
 	model = HNBackBone(num_classes=len(params['categories']), ratios=params['anchor_ratios'], scales=params['anchor_scales'], seg_classes=len(params['seg_list']))
 
-	ckpt = torch.load(load_checkpoint)
+	ckpt = torch.load(args.checkpoint)
 	model.load_state_dict(ckpt['model'])
 	print('[Info] Checkpoint loaded')
 	
