@@ -1,12 +1,18 @@
 import torch
 import torch.nn as nn
+import torchvision.transforms as transforms
+from torchvision.ops.boxes import batched_nms
+
 import cv2
 import os
+import re
+import yaml
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from torchvision.ops.boxes import batched_nms
+from glob import glob
 
+from hybridnets.backbone import HNBackBone
 
 class BBoxTransform(nn.Module):
 
@@ -139,5 +145,94 @@ def save_image(image, filename, image_path='./sample_images/', figsize=(15,9)):
 	filename = os.path.join(image_path, filename)
 	fig.savefig(filename)
 	plt.close()
+
+
+def apply_model(checkpoint_name, model=None, num_of_images=1, param_file='./hybridnets/hybridnets.yml', dataset='val'):
+	params = yaml.safe_load(open(param_file).read())
+
+	if model is None:
+		model = HNBackBone(num_classes=len(params['categories']), ratios=params['anchor_ratios'], scales=params['anchor_scales'], seg_classes=len(params['seg_list']))
+
+	####################
+	# load model state #
+	####################
+	checkpoint = torch.load(checkpoint_name, map_location='cuda')
+	model.load_state_dict(checkpoint['model'])
+	model.requires_grad_(False)
+	model.eval()
+	model = model.cuda()
+
+	####################
+	# transform images #
+	####################
+	imgs = glob(f'{params["img_root"]}/{dataset}/*.jpg')
+	input_imgs = []
+	shapes = []
+	det_only_imgs = []
+
+	# list of images
+	ori_imgs = [cv2.imread(i, cv2.IMREAD_COLOR | cv2.IMREAD_IGNORE_ORIENTATION) for i in imgs[:num_of_images]]
+	ori_imgs = [cv2.cvtColor(i, cv2.COLOR_BGR2RGB) for i in ori_imgs]
+
+	# resize images
+	resized_shape = max(params['input_size'])
+	transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize(mean=params['rgb_mean'] ,std=params['rgb_std'])])
+
+	for ori_img in ori_imgs:
+		h0, w0 = ori_img.shape[:2]
+		r = resized_shape / max(h0, w0)
+		input_img = cv2.resize(ori_img, (int(w0*r), int(h0*r)), interpolation=cv2.INTER_AREA)
+		h, w = input_img.shape[:2]
+
+		# letterbox
+		r = min(resized_shape/h, resized_shape/w)
+		dw, dh = np.mod(resized_shape-int(round(w*r)), 32) / 2, np.mod(resized_shape-int(round(h*r)), 32) / 2
+
+		# add border
+		top, bottom = int(round(dh-0.1)), int(round(dh+0.1))
+		left, right = int(round(dw-0.1)), int(round(dw+0.1))
+		input_img = cv2.copyMakeBorder(input_img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(114,114,114))
+
+		input_imgs.append(input_img)
+		shapes.append(((h0, w0), ((h/h0, w/w0), (dw, dh))))
+
+	x = torch.stack([transform(fi).cuda() for fi in input_imgs], 0).to(torch.float32)
+
+	with torch.no_grad():
+		features, regression, classification, anchors, seg = model(x)
+
+		seg = seg[:, :, 12:372, :]
+		da_seg_mask = torch.nn.functional.interpolate(seg, size=[720, 1280], mode='nearest')
+		_, da_seg_mask = torch.max(da_seg_mask, 1)
+		
+		for i in range(da_seg_mask.size(0)):
+			da_seg_mask_ = da_seg_mask[i].squeeze().cpu().numpy().round()
+			
+			color_area = np.zeros((da_seg_mask_.shape[0], da_seg_mask_.shape[1], 3), dtype=np.uint8)
+			color_area[da_seg_mask_ == 1] = [0, 255, 0]
+			color_area[da_seg_mask_ == 2] = [0, 0, 255]
+			color_seg = color_area[..., ::-1]
+			
+
+			color_mask = np.mean(color_seg, 2)
+			det_only_imgs.append(ori_imgs[i].copy())
+			seg_img = ori_imgs[i]
+			seg_img[color_mask != 0] = seg_img[color_mask != 0] * 0.5 + color_seg[color_mask != 0] * 0.5
+			seg_img = seg_img.astype(np.uint8)
+
+		regressBoxes = BBoxTransform()
+		clipBoxes = ClipBoxes()
+		out = postprocess(x, anchors, regression, classification, regressBoxes, clipBoxes, 0.25, 0.3)
+
+		for i in range(len(ori_imgs[:num_of_images])):
+			out[i]['rois'] = scale_coords(ori_imgs[i][:2], out[i]['rois'], shapes[i][0], shapes[i][1])
+			for j in range(len(out[i]['rois'])):
+				x1, y1, x2, y2 = out[i]['rois'][j].astype(int)
+				obj = params['categories'][out[i]['class_ids'][j]]
+				score = float(out[i]['scores'][j])
+				plot_one_box(ori_imgs[i], [x1, y1, x2, y2], color=((255,255,0)), label=obj, score=score, line_thickness=2)
+
+			epoch = re.findall(r'\d+',checkpoint_name)[0]
+			save_image(image=ori_imgs[i], filename=f"val{i+1}_e{epoch}.png")
 
 
