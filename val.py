@@ -25,6 +25,7 @@ def val_from_cmd(model, val_generator, params, opt):
 	dt, p, r, f1, mp, mr, map50, map = [0.0, 0.0, 0.0], 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 	iou_ls = [[] for _ in range(3)]
 	f1_ls = [[] for _ in range(3)]
+	acc_ls = [[] for _ in range(3)]
 	regressBoxes = BBoxTransform()
 	clipBoxes = ClipBoxes()
 
@@ -47,7 +48,8 @@ def val_from_cmd(model, val_generator, params, opt):
 						  torch.stack([anchors[0]] * imgs.shape[0], 0).detach(), regressions.detach(),
 						  classifications.detach(),
 						  regressBoxes, clipBoxes,
-						  0.001, 0.6)  # 0.5, 0.3
+						  #0.001, 0.6)  # 0.5, 0.3
+						  0.01, 0.6)
 
 		# imgs = imgs.permute(0, 2, 3, 1).cpu().numpy()
 		# imgs = ((imgs * [0.229, 0.224, 0.225] + [0.485, 0.456, 0.406]) * 255).astype(np.uint8)
@@ -138,11 +140,12 @@ def val_from_cmd(model, val_generator, params, opt):
 		iou = smp_metrics.iou_score(tp_seg, fp_seg, fn_seg, tn_seg, reduction='none')
 		#		 print(iou)
 		f1 = smp_metrics.balanced_accuracy(tp_seg, fp_seg, fn_seg, tn_seg, reduction='none')
+		acc = smp_metrics.accuracy(tp_seg, fp_seg, fn_seg, tn_seg, reduction='none')
 
 		for i in range(len(params['seg_list']) + 1):
-			print(f'{iter} - iou.T[i].detach().cpu().numpy(): {iou.T[i].detach().cpu().numpy()}')
 			iou_ls[i].append(iou.T[i].detach().cpu().numpy())
 			f1_ls[i].append(f1.T[i].detach().cpu().numpy())
+			acc_ls[i].append(acc.T[i].detach().cpu().numpy())
 
 		# Visualize
 		# for i in range(segmentation.size(0)):
@@ -183,13 +186,12 @@ def val_from_cmd(model, val_generator, params, opt):
 	iou_second_decoder = iou_ls[0] + iou_ls[2]
 	iou_second_decoder = np.mean(iou_second_decoder)
 	
-	print('ckpt1')
+	acc_ll = acc_ls[2]
+	acc_ll = np.mean(acc_ll)
 
 	for i in range(len(params['seg_list']) + 1):
 		iou_ls[i] = np.mean(iou_ls[i])
 		f1_ls[i] = np.mean(f1_ls[i])
-
-	print('ckpt2')
 	
 	# Compute statistics
 	stats = [np.concatenate(x, 0) for x in zip(*stats)]
@@ -197,39 +199,33 @@ def val_from_cmd(model, val_generator, params, opt):
 	# Count detected boxes per class
 	# boxes_per_class = np.bincount(stats[2].astype(np.int64), minlength=1)
 	
-	print('ckpt3')
-	
 	ap50 = None
-	save_dir = 'plots'
-	os.makedirs(save_dir, exist_ok=True)
 
 	# Compute metrics
 	if len(stats) and stats[0].any():
-		p, r, f1, ap, ap_class = ap_per_class(*stats, plot=False, save_dir=save_dir, names=names)
+		p, r, f1, ap, ap_class = ap_per_class(*stats, plot=False)#, save_dir=save_dir, names=names)
 		ap50, ap = ap[:, 0], ap.mean(1)  # AP@0.5, AP@0.5:0.95
 		mp, mr, map50, map = p.mean(), r.mean(), ap50.mean(), ap.mean()
 		nt = np.bincount(stats[3].astype(np.int64), minlength=1)  # number of targets per class
 	else:
 		nt = torch.zeros(1)
 
-	print('ckpt4')
-
 	# Print results
-	print(f'mAP50: {ap50}, IoU_first: {iou_first_decoder}, iou_second_decoder: {iou_second_decoder}')
+	print(f'Recall: {mr}, mAP50: {map50}, Drivable mIoU: {iou_first_decoder}, Lane Line IoU: {np.mean(iou_ls[2])}, Acc Lane Line: {acc_ll}')
 	
-	print(s)
-	pf = '%15s' + '%11i' * 2 + '%11.3g' * 12  # print format
-	print(pf % ('all', seen, nt.sum(), mp, mr, map50, map, iou_score, f1_score, iou_first_decoder, iou_second_decoder,
-				iou_ls[1], f1_ls[1], iou_ls[2], f1_ls[2]))
+	#print(s)
+	#pf = '%15s' + '%11i' * 2 + '%11.3g' * 12  # print format
+	#print(pf % ('all', seen, nt.sum(), mp, mr, map50, map, iou_score, f1_score, iou_first_decoder, iou_second_decoder,
+	#			iou_ls[1], f1_ls[1], iou_ls[2], f1_ls[2]))
 				
 	
 
 	# Print results per class
-	training = False
-	if (True or (nc < 50 and not training)) and nc > 1 and len(stats):
-		pf = '%15s' + '%11i' * 2 + '%11.3g' * 4
-		for i, c in enumerate(ap_class):
-			print(pf % (names[c], seen, nt[c], p[i], r[i], ap50[i], ap[i]))
+	#training = False
+	#if (True or (nc < 50 and not training)) and nc > 1 and len(stats):
+	#	pf = '%15s' + '%11i' * 2 + '%11.3g' * 4
+	#	for i, c in enumerate(ap_class):
+	#		print(pf % (names[c], seen, nt[c], p[i], r[i], ap50[i], ap[i]))
 
 
 if __name__ == "__main__":
