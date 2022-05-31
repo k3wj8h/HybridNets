@@ -61,9 +61,9 @@ HybridNets is a multi-task model for autonomous driving tasks, like traffic obje
 HybridNets
 │   train.py                      # Train script
 │   val.py                        # Validator script
-│	results.py					  # Loss plotter
-│	samples.py					  # Sample image plotter
-│	requirements.txt			  # Package dependency file
+│   results.py                    # Loss plotter
+│   samples.py                    # Sample image plotter
+│   requirements.txt              # Package dependency file
 │
 │
 └───hybridnets
@@ -138,11 +138,11 @@ cd /content/HybridNets
 
 ### Train the model
 ```bash
-python train.py --num_epochs		# Number of epochs (default=5)
-				--num_gpus			# Number of GPUs (default=1)
-				--num_sample_images	# Number of sample images (default=3)
-				--load_checkpoint	# Path of previously saved checkpoint, set None to initialize
-				--param_file		# Path of parameter file (default='./hybridnets/hybridnets.yml')
+python train.py --num_epochs        # Number of epochs (default=5)
+                --num_gpus          # Number of GPUs (default=1)
+                --num_sample_images # Number of sample images (default=3)
+                --load_checkpoint   # Path of previously saved checkpoint, set None to initialize
+                --param_file        # Path of parameter file (default='./hybridnets/hybridnets.yml')
 ```
 Please check `python train.py --help` for available arguments.
 
@@ -153,18 +153,18 @@ Folder of sample images: *sample_images*
 
 ### Evaluation
 ```bash
-python val.py --batch_size		# Number of images in a batch (default=10)
-			  --num_gpus		# Number of GPUs to be used (default=1)
-			  --checkpoint		# Path of previously saved checkpoint
-			  --param_file		# Path of parameter file (default='./hybridnets/hybridnets.yml')
+python val.py --batch_size      # Number of images in a batch (default=10)
+              --num_gpus        # Number of GPUs to be used (default=1)
+              --checkpoint      # Path of previously saved checkpoint
+              --param_file      # Path of parameter file (default='./hybridnets/hybridnets.yml')
 ```
 Please check `python val.py --help` for available arguments.
 
 
 ### Generate images of losses
 ```bash
-python results.py --checkpoint			# Path of previously saved checkpoint
-				  --image_path			# Path to save images (default='.sample_imgages')
+python results.py --checkpoint          # Path of previously saved checkpoint
+                  --image_path          # Path to save images (default='.sample_imgages')
 ```
 Please check `python results.py --help` for available arguments.
 Images will be saved into *sample_images* folder
@@ -172,19 +172,12 @@ Images will be saved into *sample_images* folder
 
 ### Generate sample images
 ```bash
-python samples.py --checkpoint			# Path of previously saved checkpoint
-				  --image_path			# Path to save images (default='.sample_imgages')
-				  --num_sample_images	# Number of sample images (default=1)
-				  --param_file			# Path of parameter file (default='./hybridnets/hybridnets.yml')
-				  --dataset				# Dataset train or val
+python samples.py --checkpoint          # Path of previously saved checkpoint
+                  --image_path          # Path to save images (default='.sample_imgages')
+                  --num_sample_images   # Number of sample images (default=1)
+                  --param_file          # Path of parameter file (default='./hybridnets/hybridnets.yml')
+                  --dataset             # Dataset train or val
 ```
 Please check `python val.py --help` for available arguments.
 Sample images will be saved into *sample_images* folder
-
-
-
-
-
-
-
 
