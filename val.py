@@ -186,7 +186,7 @@ def val_from_cmd(model, val_generator, params, opt):
 	iou_second_decoder = iou_ls[0] + iou_ls[2]
 	iou_second_decoder = np.mean(iou_second_decoder)
 	
-	acc_ll = acc_ls[2]
+	acc_ll = acc_ls[0] + acc_ls[2]
 	acc_ll = np.mean(acc_ll)
 
 	for i in range(len(params['seg_list']) + 1):
