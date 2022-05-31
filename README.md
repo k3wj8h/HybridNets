@@ -78,7 +78,7 @@ HybridNets
         hybridnets.yml            # Parameter file
 ```
 
-## Getting Started [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1Uc1ZPoPeh-lAhPQ1CloiVUsOIRAVOGWA?usp=sharing)
+## Getting Started [![Open In Colab](https://colab.research.google.com/drive/1cbj5R19PVsfHvhinLMDolEdmFIJv6i5A)
 For running the model it is necessary to use GPU. Please set the environment in Colab.
 
 
