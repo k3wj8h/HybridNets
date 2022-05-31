@@ -24,18 +24,6 @@
         <li><a href="#generate-sample-images">Generate sample images</a></li>
       </ul>
     </li>
-    <li>
-      <a href="#usage">Usage</a>
-      <ul>
-        <li><a href="#data-preparation">Data Preparation</a></li>
-        <li><a href="#training">Training</a></li>
-      </ul>
-    </li>
-    <li><a href="#training-tips">Training Tips</a></li>
-    <li><a href="#results">Results</a></li>
-    <li><a href="#license">License</a></li>
-    <li><a href="#acknowledgements">Acknowledgements</a></li>
-    <li><a href="#citation">Citation</a></li>
   </ol>
 </details>
 
